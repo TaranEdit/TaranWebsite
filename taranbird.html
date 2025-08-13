@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flappy Taran</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #70c5ce;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+  canvas {
+    background: linear-gradient(#70c5ce, #ffffff);
+    border: 2px solid #000;
+    border-radius: 10px;
+  }
+  #restartBtn {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #ffcc00;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<button id="restartBtn">Restart</button>
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  const restartBtn = document.getElementById("restartBtn");
+
+  const birdImg = new Image();
+  birdImg.src = "TaranB-removebg-preview.png";
+
+  let birdX = 50;
+  let birdY = 150;
+  let birdWidth = 50;
+  let birdHeight = 50;
+  let gravity = 0.4; // less gravity for easier play
+  let lift = -9; // slightly stronger jump
+  let velocity = 0;
+
+  let pipes = [];
+  let pipeWidth = 60;
+  let pipeGap = 180; // bigger gap
+  let frame = 0;
+  let score = 0;
+  let gameOver = false;
+
+  document.addEventListener("keydown", () => {
+    if (!gameOver) velocity = lift;
+  });
+  document.addEventListener("click", () => {
+    if (!gameOver) velocity = lift;
+  });
+
+  function drawBird() {
+    ctx.drawImage(birdImg, birdX, birdY, birdWidth, birdHeight);
+  }
+
+  function drawPipes() {
+    ctx.fillStyle = "#228B22";
+    pipes.forEach(pipe => {
+      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+      ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipeWidth, pipe.bottom);
+    });
+  }
+
+  function updatePipes() {
+    if (frame % 100 === 0) { // pipes spawn less frequently
+      let topHeight = Math.floor(Math.random() * (canvas.height - pipeGap - 100) + 50);
+      let bottomHeight = canvas.height - topHeight - pipeGap;
+      pipes.push({ x: canvas.width, top: topHeight, bottom: bottomHeight });
+    }
+    pipes.forEach(pipe => {
+      pipe.x -= 2;
+    });
+    pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+  }
+
+  function detectCollision() {
+    for (let pipe of pipes) {
+      if (
+        birdX < pipe.x + pipeWidth &&
+        birdX + birdWidth > pipe.x &&
+        (birdY < pipe.top || birdY + birdHeight > canvas.height - pipe.bottom)
+      ) {
+        gameOver = true;
+      }
+    }
+    if (birdY + birdHeight >= canvas.height || birdY <= 0) {
+      gameOver = true;
+    }
+  }
+
+  function drawScore() {
+    ctx.fillStyle = "#000";
+    ctx.font = "24px Arial";
+    ctx.fillText(`Score: ${score}`, 10, 30);
+  }
+
+  function updateScore() {
+    pipes.forEach(pipe => {
+      if (!pipe.scored && pipe.x + pipeWidth < birdX) {
+        score++;
+        pipe.scored = true;
+      }
+    });
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBird();
+    drawPipes();
+    drawScore();
+    if (!gameOver) {
+      velocity += gravity;
+      birdY += velocity;
+      updatePipes();
+      detectCollision();
+      updateScore();
+      frame++;
+      requestAnimationFrame(loop);
+    } else {
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fff";
+      ctx.font = "36px Arial";
+      ctx.fillText("Game Over", canvas.width / 2 - 80, canvas.height / 2 - 20);
+      restartBtn.style.display = "block";
+    }
+  }
+
+  restartBtn.addEventListener("click", () => {
+    birdY = 150;
+    velocity = 0;
+    pipes = [];
+    frame = 0;
+    score = 0;
+    gameOver = false;
+    restartBtn.style.display = "none";
+    loop();
+  });
+
+  birdImg.onload = () => {
+    loop();
+  };
+</script>
+</body>
+</html>
